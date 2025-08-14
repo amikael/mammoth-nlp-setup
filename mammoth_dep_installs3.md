@@ -101,7 +101,7 @@ Successfully built mammoth-nlp
 Installing collected packages: sentencepiece, tqdm, scikit-learn, mammoth-nlp
   Attempting uninstall: sentencepiece
     Found existing installation: sentencepiece 0.2.0
-    Not uninstalling sentencepiece at /opt/miniconda3/envs/pytorch/lib/python3.10/site-packages, outside environment /project/project_462000964/members/aylijyra/venv/mammoth3.10-with-site
+    Not uninstalling sentencepiece at /opt/miniconda3/envs/pytorch/lib/python3.10/site-packages, outside environment $PROJHOME/venv/mammoth3.10-with-site
     Cannot uninstall ``sentencepiece`. No files were found to uninstall.
   Attempting uninstall: tqdm
     Found existing installation: tqdm 4.67.1
