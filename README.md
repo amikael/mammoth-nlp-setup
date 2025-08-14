@@ -1,5 +1,5 @@
 # mammoth-nlp-setup
-Snippets to facilitate with the search for the optimal mammoth-nlp setup on Puhti and LUMI.  
+Snippets to facilitate with the search for the optimal mammoth-nlp setup on Puhti (puhti.csc.fi) and LUMI (lumi.csc.fi).  
 
 ## Purpose
 This repository was born to develop an optimal setup procedure for the Mammoth Toolkit (known as `mammoth-nlp` in pip) for Transformer-based MT.
@@ -20,7 +20,7 @@ This repository collects information that relates to the following aspects:
    - This choice can affect the choice of the container or module that you use to load pytorch.
 
 3. **You need to setup "comms" properly**
-   - CSC packages and modules make all the possible to help to set up interprocessor communication right.  However, there are settings, such as just-in-time compilation cache setup that cannot be done strightforwardly in the modules in advance since the module does not necessarily know Slurm parameters etc.  There are also other situations where the user has to know how to set up the "comms".
+   - CSC packages and modules make all the possible to help to set up inter-processor communication right.  However, there are settings, such as just-in-time compilation cache setup that cannot be done strightforwardly in the modules in advance since the module does not necessarily know Slurm parameters etc.  There are also other situations where the user has to know how to set up the "comms".
    - Setting up the comms parameters is tricky and one often needs to diagnose log files and validate the correct behaviour of PyTorch and the ROCm architecture.  One of the common issues is that the run-time plugins are not found or they are not compatibe. Thus, doing the setup successfully requires some effort.
   
 4. **You need to setup Slurm jobs correctly**
@@ -34,4 +34,24 @@ Given all this complexity of setting up the environment for model trainining, th
 ## Topics
 
 This repository of setup instructions will grow gradually as I move some of the related research here.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+
+### Using (almost) the latest PyTorch version for LUMNI
+- CSC-provided container with recent ROCm support
+- Using the container through the CSC-style module (that I adapted to the container)
+
+### Setting the CONDA Virtual Environment
+- [mammoth_dep_changes1.md](mammoth_dep_changes1.md) is a document describing verbosely how I set up the virtual environment for mammoth-nlp and learned to do it "almost right". This was done first under a recommended AI container since this was newer than the pytorch module.  (Later on, I managed to make a CSC-style module out of this container.  Soon, I guess, we can expect to have a newer pytorch module available too.)
+- [mammoth_dep_changes2.md](mammoth_dep_changes2.md) decribes what still went wrong with the creation of the virtual environment.  I identified 6 recipies to do the things in the right way.  You are not done before you do all six of them.
+- [setup3.11.py](setup3.11.py) is an update file to `setup.py` of `mammoth-nlp`: this comes with some updates in the `install_requires` of mammoth-nlp when this is being installed on Python 3.11. (After a thorough testing, this file update may be included to the mammoth-nlp codebase.)
+- [mammoth_dep_check.py](mammoth_dep_check.py) is a tool for checking the status of the python packages required by `mammoth-nlp`.  
+- [mammoth_dep_check_proposed3.11.py](mammoth_dep_check_proposed3.11.py) is the same tool with some updates in the `install_requires` of mammoth-nlp when this is being installed on Python 3.11.
+- [mammoth_dep_check.md](mammoth_dep_check.md) gives some examples of the use case, indicating the changes in the package requirement status when I installed mammoth-nlp on Python 3.11 and made some changes to get the clean output.
+
+  For the basic use this tool is a bit too much code, but it gives a nice output anyway.  If it does not work, it may require some registry file (a dot file) to exist in the user's home directory.  This is because the tool was orginally intended for finding out whether these packages are from the cray-python module, pytorch module, user's local installations or from the virtual environment, but this functionaly is currently is now a relic that may or may not work when set up with some wrappers for module and pip commands.   
+                                                                                                                                                                                            
+### Setting up the Inter-processor communication
+- [RCCL-test] is a repository of tools I developed to facilitate testing the inter-processor communications in LUMI.
+- [rocm-setup.sh] is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
+
+### Setting up the Slurm jobs
+
