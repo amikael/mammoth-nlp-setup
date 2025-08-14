@@ -1,5 +1,5 @@
 # mammoth-nlp-setup
-Snippets to facilitate with the mammoth-nlp setup on Puhti and LUMI
+Snippets to facilitate with the search for the optimal mammoth-nlp setup on Puhti and LUMI.  
 
 ## Purpose
 This repository was born to develop an optimal setup procedure for the Mammoth Toolkit (known as `mammoth-nlp` in pip) for Transformer-based MT.
@@ -28,8 +28,9 @@ This repository collects information that relates to the following aspects:
 
 5. **You also need to master Mammoth specific configurations**
 
-Given all this complexity of setting up the environment for model trainining, there is a high risk of doing something wrong.   The purpose of this repository is to collect the know-how in the setup decisions.  Not only example setups but also what kind of design choices have been made before arriving to these choices.
+Given all this complexity of setting up the environment for model trainining, there is a high risk of doing something wrong.   The purpose of this repository is to collect the know-how in the setup decisions.  Not only example setups but also what kind of design choices have been made before arriving to these choices.  *This is not the place to find short answers*  This is a repository where you find some tools, research, and results on the setup best practice.
 
 ## Topics
 
 This repository of setup instructions will grow gradually as I move some of the related research here.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
