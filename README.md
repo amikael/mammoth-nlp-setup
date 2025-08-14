@@ -36,7 +36,7 @@ Given all this complexity of setting up the environment for model trainining, th
 This repository of setup instructions will grow gradually as I move some of the related research here.
 
 ### Using (almost) the latest PyTorch version for LUMI
-- CSC-provided container with recent ROCm support
+- [python_container.md](python_container.md) - Describes how I chose a CSC-provided container with recent ROCm support
 - [lazy_python_container.md](lazy_python_container.md) - Using the container through the CSC-style module (that I adapted to the container)
 
 ### Setting the CONDA Virtual Environment
