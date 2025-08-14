@@ -53,7 +53,8 @@ This repository of setup instructions will grow gradually as I move some of the 
                                                                                                                                                                                             
 ### Setting up the Inter-processor communication
 - [RCCL-test](https://github.com/amikael/RCCL-tests) is a repository of tools I developed to facilitate testing the inter-processor communications in LUMI.
-- [rocm-setup.sh](https://github.com/amikael/RCCL-tests/rocm-setup.sh) is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
+- [rocm-setup.sh](rocm-setup.sh) is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
+- [rocm-setup-commented.sh](rocm-setup-commented.sh) is the same file with some information about the validation of various features via log file.  This file is a relic and I am not sure if this is very useful.
 
 ### Setting up the Slurm jobs
 
