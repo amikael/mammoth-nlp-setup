@@ -40,18 +40,18 @@ exit # exit the srun session
 ```
 After this build, you need to verify the torch provided by the environment finds ROCm.
 
-### Recipe 2: Install MAMMOTH on Python 3.12
+### Recipe 2: Install MAMMOTH on Python 3.11
 You can follow the recipe for Python 3.11, but currently there is no working recipe for building `pyonmttok` for Python 3.12.  I have tried this and the problem seemed to be that different parts of the known building recipe [OpenNMT repo discussion](https://github.com/OpenNMT/Tokenizer/issues/329) use implicitly different Python versions and libraries.   This prevents installing the compiled package to the virtual environment.  After some 20 attempts, I could not fix the discrepancy between the compilers.
 
 ### Recipe 3: Update the MAMMOTH Requirements
 Now we have to update the `setup.py` of MAMMOTH.  Try
 ```bash
-diff ../rebuilt3.10-with-conda/mammoth/setup.py conf/setup.py
+diff ../rebuilt3.10-with-conda/mammoth/setup.py setup3.11.py
 ```
 If this looks good, you can: 
 ```
 mv ../rebuilt3.10-with-conda/mammoth/setup.py ../rebuilt3.10-with-conda/mammoth/setup-original.py
-cp -p conf/setup.py ../rebuilt3.10-with-conda/mammoth/setup.py
+cp -p setup3.11.py ../rebuilt3.10-with-conda/mammoth/setup.py
 ```
 Now running the installation script again should start MAMMOTH installation on the virtual environment.
 ```bash
