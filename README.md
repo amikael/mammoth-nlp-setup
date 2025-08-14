@@ -52,8 +52,8 @@ This repository of setup instructions will grow gradually as I move some of the 
   For the basic use this tool is a bit too much code, but it gives a nice output anyway.  If it does not work, it may require some registry file (a dot file) to exist in the user's home directory.  This is because the tool was orginally intended for finding out whether these packages are from the cray-python module, pytorch module, user's local installations or from the virtual environment, but this functionaly is a relic that may or may not work when set up with some wrappers for module and pip commands.   
                                                                                                                                                                                             
 ### Setting up the Inter-processor communication
-- [RCCL-test] is a repository of tools I developed to facilitate testing the inter-processor communications in LUMI.
-- [rocm-setup.sh] is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
+- [RCCL-test](https://github.com/amikael/RCCL-tests) is a repository of tools I developed to facilitate testing the inter-processor communications in LUMI.
+- [rocm-setup.sh](https://github.com/amikael/RCCL-tests/rocm-setup.sh) is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
 
 ### Setting up the Slurm jobs
 
