@@ -31,11 +31,11 @@ This repository collects information that relates to the following aspects:
 
 Given all this complexity of setting up the environment for model trainining, there is a high risk of doing something wrong.   The purpose of this repository is to collect the know-how in the setup decisions.  Not only example setups but also what kind of design choices have been made before arriving to these choices.  *This is not the place to find short answers*  This is a repository where you find some tools, research, and results on the setup best practice.
 
-## Topics
+## Topics on LUMI 
 
 This repository of setup instructions will grow gradually as I move some of the related research here.
 
-### Using (almost) the latest PyTorch version for LUMNI
+### Using (almost) the latest PyTorch version for LUMI
 - CSC-provided container with recent ROCm support
 - Using the container through the CSC-style module (that I adapted to the container)
 
