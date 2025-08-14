@@ -55,3 +55,6 @@ This repository of setup instructions will grow gradually as I move some of the 
 
 ### Setting up the Slurm jobs
 
+- [detect_system.sh](detect_system.sh) is an includable script that detects whether we are on puhti.csc.fi, lumi.csc.fi etc.  Note that `$(hostname)` does not work on LUMI.  This can be used to make trains scripts to adapt automatically to the system when you have to switch between different machines.
+- 
+
