@@ -1,5 +1,5 @@
 # mammoth-nlp-setup
-Snippets to facilitate with the search for the optimal mammoth-nlp setup on Puhti (puhti.csc.fi) and LUMI (lumi.csc.fi).  
+Snippets to facilitate with the search for the optimal mammoth-nlp setup on LUMI (lumi.csc.fi).  
 
 ## Purpose
 This repository was born to develop an optimal setup procedure for the Mammoth Toolkit (known as `mammoth-nlp` in pip) for Transformer-based MT.
@@ -40,8 +40,8 @@ This repository of setup instructions will grow gradually as I move some of the 
 - Using the container through the CSC-style module (that I adapted to the container)
 
 ### Setting the CONDA Virtual Environment
-- [mammoth_dep_changes1.md](mammoth_dep_changes1.md) is a document describing verbosely how I set up the virtual environment for mammoth-nlp and learned to do it "almost right". This was done first under a recommended AI container since this was newer than the pytorch module.  (Later on, I managed to make a CSC-style module out of this container.  Soon, I guess, we can expect to have a newer pytorch module available too.)
-- [mammoth_dep_changes2.md](mammoth_dep_changes2.md) decribes what still went wrong with the creation of the virtual environment.  I identified 6 recipies to do the things in the right way.  You are not done before you do all six of them.
+- [mammoth_dep_installs1.md](mammoth_dep_installs1.md) is a document describing verbosely how I set up the virtual environment for mammoth-nlp and learned to do it "almost right". This was done first under a recommended AI container since this was newer than the pytorch module.  (Later on, I managed to make a CSC-style module out of this container.  Soon, I guess, we can expect to have a newer pytorch module available too.)
+- [mammoth_dep_installs2.md](mammoth_dep_installs2.md) decribes what still went wrong with the creation of the virtual environment.  I identified 6 recipies to do the things in the right way.  You are not done before you understand all six of them.
 - [setup3.11.py](setup3.11.py) is an update file to `setup.py` of `mammoth-nlp`: this comes with some updates in the `install_requires` of mammoth-nlp when this is being installed on Python 3.11. (After a thorough testing, this file update may be included to the mammoth-nlp codebase.)
 - [mammoth_dep_check.py](mammoth_dep_check.py) is a tool for checking the status of the python packages required by `mammoth-nlp`.  
 - [mammoth_dep_check_proposed3.11.py](mammoth_dep_check_proposed3.11.py) is the same tool with some updates in the `install_requires` of mammoth-nlp when this is being installed on Python 3.11.
@@ -54,4 +54,7 @@ This repository of setup instructions will grow gradually as I move some of the 
 - [rocm-setup.sh] is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
 
 ### Setting up the Slurm jobs
+
+- [detect_system.sh](detect_system.sh) is an includable script that detects whether we are on puhti.csc.fi, lumi.csc.fi etc.  Note that `$(hostname)` does not work on LUMI.  This can be used to make trains scripts to adapt automatically to the system when you have to switch between different machines.
+- 
 
