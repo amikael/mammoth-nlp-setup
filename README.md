@@ -15,11 +15,11 @@ This repository collects information that relates to the following aspects:
    - You need to make sure that PyTorch has access to ROCm, OFI Plugin, Slingshot, Libfabric, High Speed Network, CXI, caches etc. to work optimally in interprocess communication between GPUs and between computation nodes.   You need to have the related run-time plugins in your library path.
    - You need to make sure that they are consistent with each other.  Thus, you need to know what CSC-prefabricated containers and modules can provide you Python and PyTorch and what versions of them you need.
   
-2. **You need to the right version of Python**
-   - It is non-trivial to know what versions of Python and PyTorch are compatible with other packages needed for running Mammoth Toolkit.
-   - This choice can affect the choice of the container or module that you use to load pytorch.
+2. **You need to use a fairly recent but not the most recent version of Python**
+   - It is non-trivial to know what versions of Python and PyTorch are compatible with other packages needed for running Mammoth Toolkit.  Python >=3.12 is definitely too new and incompatible with one package, but can you install mammoth on Python 3.11?
+   - The choice of Python version can affect the choice of the container or module that you use to load pytorch.  We may be in a trouble if Python 3.11 is no more supported for the recommended PyTorch/ROCm combo where ROCm is updated to 6.3.  
 
-3. **You need to setup "comms" properly**
+3. **You need to setup LUMI "comms" properly**
    - CSC packages and modules make all the possible to help to set up inter-processor communication right.  However, there are settings, such as just-in-time compilation cache setup that cannot be done strightforwardly in the modules in advance since the module does not necessarily know Slurm parameters etc.  There are also other situations where the user has to know how to set up the "comms".
    - Setting up the comms parameters is tricky and one often needs to diagnose log files and validate the correct behaviour of PyTorch and the ROCm architecture.  One of the common issues is that the run-time plugins are not found or they are not compatibe. Thus, doing the setup successfully requires some effort.
   
