@@ -10,9 +10,10 @@ Everyone who has experience on supercomputing knows that the setup of the comput
 This repository collects information that relates to the following aspects:
 
 1. **You will need the right way to load PyTorch**
-   - You should not install `pytorch` with `pip` (although such kind of instructions have been around).
-   - The package loads tens of thousands of files per python task and these package files are stored mainly on an RAID disk.  This kind of list is slow to use, especially when there are a lot of cuts down a lot of resources from the system, slowing down all jobs and making you to behave badly. Thus, you need to have a container of SquashFS to speed up the reading of so many files every time when you import python. 
-     b. You need to make sure that PyTorch has access to ROCm, OFI Plugin, Slingshot, Libfabric, High Speed Network, CXI, caches etc. to work optimally in interprocess communication between GPUs and between computation nodes.  You need to have the related run-time plugins in your library path and you need to make sure that they are consistent with each other.  Thus, you need to know what CSC-prefabricated containers and modules can provide you Python and PyTorch and what versions of them you need.
+   - You should not install `pytorch` with `pip` (although such kind of instructions have been around). The package loads tens of thousands of files per python task and these package files are stored mainly on an RAID disk.  This kind of list is slow to use, especially when there are a lot of cuts down a lot of resources from the system, slowing down all jobs and making you to behave badly.
+   - Thus, you need to have a container of SquashFS to speed up the reading of so many files every time when you import python. 
+   - You need to make sure that PyTorch has access to ROCm, OFI Plugin, Slingshot, Libfabric, High Speed Network, CXI, caches etc. to work optimally in interprocess communication between GPUs and between computation nodes.   You need to have the related run-time plugins in your library path.
+   - You need to make sure that they are consistent with each other.  Thus, you need to know what CSC-prefabricated containers and modules can provide you Python and PyTorch and what versions of them you need.
   
 2. **You need to the right version of Python**
    - It is non-trivial to know what versions of Python and PyTorch are compatible with other packages needed for running Mammoth Toolkit.
