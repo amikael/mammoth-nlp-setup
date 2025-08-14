@@ -41,7 +41,7 @@ exit # exit the srun session
 After this build, you need to verify the torch provided by the environment finds ROCm.
 
 ### Recipe 2: Install MAMMOTH on Python 3.12
-You can follow the recipe for Python 3.11, but currently there is no working recipe for building `pyonmttok` for Python 3.12.  I have tried this and the problem seemed to be that different parts of the known building recipe use implicitly different Python versions and libraries.   This prevents installing the compiled package to the virtual environment.  After some 20 attempts, I could not fix the discrepancy between the compilers.
+You can follow the recipe for Python 3.11, but currently there is no working recipe for building `pyonmttok` for Python 3.12.  I have tried this and the problem seemed to be that different parts of the known building recipe [OpenNMT repo discussion](https://github.com/OpenNMT/Tokenizer/issues/329) use implicitly different Python versions and libraries.   This prevents installing the compiled package to the virtual environment.  After some 20 attempts, I could not fix the discrepancy between the compilers.
 
 ### Recipe 3: Update the MAMMOTH Requirements
 Now we have to update the `setup.py` of MAMMOTH.  Try
@@ -91,6 +91,7 @@ In fact, it is easy to verify that some packages such as `x-transformers` requir
 pip install --no-deps x-transformers
 ```
 I have now updated the script `pip_install3.10-with-conda.sh` accordingly, but this attacks only the symptom and is not the correct way, because some of the packages x-transformers is dependent of may now be left uninstalled.  The better way is to inherit the site packages which turns out to be the root problem, see Recipe 6.
+
 ### Recipe 6: Include the preinstalled Python packages to the virtual environment
 Now it seems that when we create a virtual environment, the preinstalled python packages, such as `torch` is not automatically included.  The following demonstrates the problem.
 ```bash
