@@ -49,8 +49,8 @@ This repository of setup instructions will grow gradually as I move some of the 
                                                                                                                                                      - [mammoth_dep_installs1.md](mammoth_dep_installs1.md) is a document describing verbosely how I set up the virtual environment for mammoth-nlp and learned to do it "almost right". This was done first under a recommended AI container since this was newer than the pytorch module.  (Later on, I managed to make a CSC-style module out of this container.  Soon, I guess, we can expect to have a newer pytorch module available too.)
 - [mammoth_dep_installs2.md](mammoth_dep_installs2.md) decribes what still went wrong with the creation of the virtual environment.  I identified 6 recipies to do the things in the right way.  You are not done before you understand all six of them.
 - [mammoth_dep_installs3.md](mammoth_dep_installs3.md) validates the pytorch version of the venv with site packages.
-- [mammoth_dep_installs4.md](mammoth_dep_installs4.md) uses a CSC-style module for a CSC-built container and reinstall mammoth-nlp using it. The best results so far! 
-- [mammoth_dep_installs5.md](mammoth_dep_installs4.md) uses a CSC-style module for a CSC-built container and reinstall mammoth-nlp using it. The best results so far! 
+- [mammoth_dep_installs4.md](mammoth_dep_installs4.md) compares the manual launch of a container with my first version of a CSC-style module to implement the lazy launching technique.  The results were promising, but not perfect. 
+- [mammoth_dep_installs5.md](mammoth_dep_installs4.md) reinstalling MAMMOTH to LUMI using a CSC-style module to launch a CSC-built container lazily and to pip install mammoth-nlp using it. The best results so far! 
                                        
 ### Setting up the Inter-processor communication
 - [RCCL-test](https://github.com/amikael/RCCL-tests) is a repository of tools I developed to facilitate testing the inter-processor communications in LUMI.
