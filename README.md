@@ -40,17 +40,18 @@ This repository of setup instructions will grow gradually as I move some of the 
 - [lazy_python_container.md](lazy_python_container.md) - Using the container through the CSC-style module (that I adapted to the container)
 
 ### Setting the CONDA Virtual Environment
-- [mammoth_dep_installs1.md](mammoth_dep_installs1.md) is a document describing verbosely how I set up the virtual environment for mammoth-nlp and learned to do it "almost right". This was done first under a recommended AI container since this was newer than the pytorch module.  (Later on, I managed to make a CSC-style module out of this container.  Soon, I guess, we can expect to have a newer pytorch module available too.)
-- [mammoth_dep_installs2.md](mammoth_dep_installs2.md) decribes what still went wrong with the creation of the virtual environment.  I identified 6 recipies to do the things in the right way.  You are not done before you understand all six of them.
-- [mammoth_dep_installs3.md](mammoth_dep_installs3.md) validates the pytorch version of the venv with site packages.
-- [mammoth_dep_installs4.md](mammoth_dep_installs4.md) uses a CSC-style module for a CSC-built container and reinstall mammoth-nlp using it. The best results so far!
 - [setup3.11.py](setup3.11.py) is an update file to `setup.py` of `mammoth-nlp`: this comes with some updates in the `install_requires` of mammoth-nlp when this is being installed on Python 3.11. (After a thorough testing, this file update may be included to the mammoth-nlp codebase.)
 - [mammoth_dep_check.py](mammoth_dep_check.py) is a tool for checking the status of the python packages required by `mammoth-nlp`.  
 - [mammoth_dep_check_proposed3.11.py](mammoth_dep_check_proposed3.11.py) is the same tool with some updates in the `install_requires` of mammoth-nlp when this is being installed on Python 3.11.
 - [mammoth_dep_check.md](mammoth_dep_check.md) gives some examples of the use case, indicating the changes in the package requirement status when I installed mammoth-nlp on Python 3.11 and made some changes to get the clean output.
 
   For the basic use this tool is a bit too much code, but it gives a nice output anyway.  If it does not work, it may require some registry file (a dot file) to exist in the user's home directory.  This is because the tool was orginally intended for finding out whether these packages are from the cray-python module, pytorch module, user's local installations or from the virtual environment, but this functionaly is a relic that may or may not work when set up with some wrappers for module and pip commands.   
-                                                                                                                                                                                            
+                                                                                                                                                     - [mammoth_dep_installs1.md](mammoth_dep_installs1.md) is a document describing verbosely how I set up the virtual environment for mammoth-nlp and learned to do it "almost right". This was done first under a recommended AI container since this was newer than the pytorch module.  (Later on, I managed to make a CSC-style module out of this container.  Soon, I guess, we can expect to have a newer pytorch module available too.)
+- [mammoth_dep_installs2.md](mammoth_dep_installs2.md) decribes what still went wrong with the creation of the virtual environment.  I identified 6 recipies to do the things in the right way.  You are not done before you understand all six of them.
+- [mammoth_dep_installs3.md](mammoth_dep_installs3.md) validates the pytorch version of the venv with site packages.
+- [mammoth_dep_installs4.md](mammoth_dep_installs4.md) uses a CSC-style module for a CSC-built container and reinstall mammoth-nlp using it. The best results so far! 
+- [mammoth_dep_installs5.md](mammoth_dep_installs4.md) uses a CSC-style module for a CSC-built container and reinstall mammoth-nlp using it. The best results so far! 
+                                       
 ### Setting up the Inter-processor communication
 - [RCCL-test](https://github.com/amikael/RCCL-tests) is a repository of tools I developed to facilitate testing the inter-processor communications in LUMI.
 - [rocm-setup.sh](rocm-setup.sh) is a shell include file (intended to be sourced rather than called) containing variable settings for the optimal interprocessor communication.
