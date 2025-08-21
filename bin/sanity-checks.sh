@@ -6,11 +6,118 @@ set -euo pipefail  # make failures fatal and undefined vars errors (optional)
 : "${PATTERN:?❌ PATTERN is not set}"         
 : "${GUARD_MAX_NODES:?❌ GUARD_MAX_NODES is not set}"   
 : "${GUARD_TIME:?❌ GUARD_TIME is not set}"   
-: "${SLURM_JOB_ID:?❌ missing SLURM_JOB_ID - did you run `sbatch`}" # 
+: "${SLURM_CPUS_ON_NODE:?❌ SLURM_CPUS_ON_NODE is not set}"
+: "${SLURM_CPUS_PER_TASK:?❌ SLURM_CPUS_PER_TASK is not set}"
+: "${SLURM_GPUS_ON_NODE:?❌ SLURM_GPUS_ON_NODE is not set}"
+: "${SLURM_HINT:?❌ SLURM_HINT is not set}"
 : "${SLURM_JOB_ACCOUNT:?❌ missing \#SBATCH --account=...}"         # not SLURM_ACCOUNT
-: "${SLURM_JOB_PARTITION:?❌ missing \#SBATCH --partition=...}"     # not SLURM_PARTITION
-: "${SLURM_NTASKS:?❌ missing \#SBATCH --ntasks=...}"               # 
+: "${SLURM_JOB_CPUS_PER_NODE:?❌ SLURM_JOB_CPUS_PER_NODE is not set}"
+: "${SLURM_JOB_GPUS:?❌ SLURM_JOB_GPUS is not set}"
+: "${SLURM_JOB_ID:?❌ missing SLURM_JOB_ID - did you run `sbatch`}" # 
 : "${SLURM_JOB_NUM_NODES:?❌ missing \#SBATCH --nodes=...}"         #
+: "${SLURM_JOB_PARTITION:?❌ missing \#SBATCH --partition=...}"     # not SLURM_PARTITION
+: "${SLURM_NNODES:?❌ SLURM_NNODES is not set}"
+: "${SLURM_NODELIST:?❌ SLURM_NODELIST is not set}"
+: "${SLURM_NPROCS:?❌ SLURM_NPROCS is not set}"
+: "${SLURM_NTASKS:?❌ missing \#SBATCH --ntasks=...}"               # 
+: "${SLURM_NTASKS_PER_NODE:?❌ SLURM_NTASKS_PER_NODE is not set}"
+: "${SLURM_TASKS_PER_NODE:?❌ SLURM_TASKS_PER_NODE is not set}"
+
+# ----- detect GPUs (env OR job/step record) and compute GPUS_TOTAL ---------
+JOBREC="$(scontrol show -d job  "${SLURM_JOB_ID:?}" 2>/dev/null | tr '\n' ' ')"
+STEPREC="$(scontrol show -d step "${SLURM_JOB_ID}.batch" 2>/dev/null | tr '\n' ' ')"
+REC_ALL="$JOBREC $STEPREC"
+
+# 1) accept modern --gpus* flags via env
+if [[ -n "${SLURM_GPUS_PER_TASK-}" || -n "${SLURM_GPUS_PER_NODE-}" || -n "${SLURM_GPUS-}" ]]; then
+  :  # ok
+
+# 2) accept any GRES env hints mentioning gpu (rarely exported in batch, but cheap to check)
+elif [[ "${SLURM_GRES-}${SLURM_JOB_GRES-}${SLURM_STEP_GRES-}" == *gpu* ]]; then
+  :  # ok
+
+# 3) accept if job/step record mentions GPUs in any of the common fields
+elif grep -Eq '(^|[[:space:]])(Gres=.*gpu|JOB_GRES=.*gpu|ReqTRES=.*gres/gpu|AllocTRES=.*gres/gpu|TresPerNode=.*gres:gpu)' <<<"$REC_ALL"; then
+  :  # ok
+
+else
+  echo "❌ No GPUs requested. Use either --gpus-* OR --gres=gpu[:type]:N." >&2
+  # DEBUG (optional)
+  echo "DBG env: GPUS=${SLURM_GPUS-} GpT=${SLURM_GPUS_PER_TASK-} GpN=${SLURM_GPUS_PER_NODE-} GRES=${SLURM_GRES-}${SLURM_JOB_GRES-}${SLURM_STEP_GRES-}" >&2
+  echo "DBG job:  $(sed 's/  */ /g' <<<"$JOBREC")" >&2
+  echo "DBG step: $(sed 's/  */ /g' <<<"$STEPREC")" >&2
+  exit 1
+fi
+
+# Compute total GPUs (GPUS_TOTAL) and per-node GPUs (GPUS_PER_NODE)
+GPUS_TOTAL=""; GPUS_PER_NODE=""
+# env totals first
+if [[ -n "${SLURM_GPUS-}" && "$SLURM_GPUS" =~ ^[0-9]+$ ]]; then
+  GPUS_TOTAL="$SLURM_GPUS"
+elif [[ -n "${SLURM_GPUS_PER_TASK-}" && -n "${SLURM_NTASKS-}" ]]; then
+  GPUS_TOTAL=$(( SLURM_GPUS_PER_TASK * SLURM_NTASKS ))
+elif [[ -n "${SLURM_GPUS_PER_NODE-}" && -n "${SLURM_JOB_NUM_NODES-}" ]]; then
+  GPUS_PER_NODE="${SLURM_GPUS_PER_NODE%%:*}"
+  GPUS_TOTAL=$(( GPUS_PER_NODE * SLURM_JOB_NUM_NODES ))
+fi
+
+# ReqTRES/AllocTRES contain total GPUs as gres/gpu( :type )?=N
+if [[ -z "$GPUS_TOTAL" && "$REC_ALL" =~ gres\/gpu([^=[:space:]]*)?=([0-9]+) ]]; then
+  GPUS_TOTAL="${BASH_REMATCH[2]}"
+fi
+
+# Try per-node via TresPerNode=gres:gpu(:type)?:N
+if [[ -z "${GPUS_PER_NODE:-}" ]]; then
+  GPN="$(sed -n 's/.*TresPerNode=\([^[:space:]]*\).*/\1/p' <<<"$REC_ALL")"
+  if [[ -n "$GPN" ]]; then
+    GPN="${GPN%%(*}"
+    totpn=0
+    IFS=, read -ra toks <<<"$GPN"
+    for t in "${toks[@]}"; do
+      [[ "$t" == gres:gpu* || "$t" == gpu* ]] || continue
+      n="${t##*:}"; [[ "$n" =~ ^[0-9]+$ ]] && (( totpn += n ))
+    done
+    (( totpn > 0 )) && GPUS_PER_NODE="$totpn"
+  fi
+fi
+
+# Fallback per-node from GRES/JOB_GRES tokens
+if [[ -z "$GPUS_PER_NODE" ]]; then
+  # prefer JOB_GRES= if present, else GRES=
+  if [[ "$REC_ALL" =~ JOB_GRES=([^[:space:]]+) ]]; then
+    GRES_STR="${BASH_REMATCH[1]}"
+  elif [[ "$REC_ALL" =~ [[:space:]]Gres=([^[:space:]]+) ]]; then
+    GRES_STR="${BASH_REMATCH[1]}"
+  else
+    GRES_STR=""
+  fi
+  if [[ -n "$GRES_STR" ]]; then
+    GRES_STR="${GRES_STR%%(*}"       # drop (IDX:...)
+    totpn=0
+    IFS=, read -ra toks <<<"$GRES_STR"
+    for t in "${toks[@]}"; do
+      [[ "$t" == gpu* ]] || continue
+      n="${t##*:}"; [[ "$n" =~ ^[0-9]+$ ]] && (( totpn += n ))
+    done
+    (( totpn > 0 )) && GPUS_PER_NODE="$totpn"
+  fi
+fi
+
+# If we have per-node and nodes, fill total
+if [[ -z "$GPUS_TOTAL" && -n "$GPUS_PER_NODE" ]]; then
+  if [[ -n "${SLURM_JOB_NUM_NODES-}" ]]; then
+    NODES="$SLURM_JOB_NUM_NODES"
+  elif [[ "$REC_ALL" =~ NumNodes=([0-9]+) ]]; then
+    NODES="${BASH_REMATCH[1]}"
+  else
+    NODES=""
+  fi
+  [[ "$NODES" =~ ^[0-9]+$ ]] && GPUS_TOTAL=$(( GPUS_PER_NODE * NODES ))
+fi
+
+: "${GPUS_TOTAL:?❌ No GPUs requested. Use either --gpus-* OR --gres=gpu[:type]:N.}"
+echo "OK[gpu-spec]: total=$GPUS_TOTAL per-node=${GPUS_PER_NODE:-unknown}"
+# ---------------------------------------------------------------------------
 
 JOBINFO="$(scontrol show --details job "$SLURM_JOB_ID")" || { echo "❌ ERROR: scontrol failed"; exit 1; }
 field() { sed -n "s/.*$1=\([^ ]*\).*/\1/p" <<<"$JOBINFO"; } # to access scontrol output
@@ -56,7 +163,9 @@ if (( tl_sec > gt_sec )); then
   echo "❌ Time limit $tl exceeds guard ${GUARD_TIME} (>${GUARD_TIME}). Reduce --time." >&2
   exit 1
 fi
-printf 'OK[time]: requested=%s (=%ss) ≤ guard=%s (=%ss)\n' "$tl" "$tl_sec" "$GUARD_TIME" "$gt_sec"
+echo =====================================================================
+printf 'Time Allocation: requested=%s (=%ss) ≤ guard=%s (=%ss)\n' "$tl" "$tl_sec" "$GUARD_TIME" "$gt_sec"
+echo =====================================================================
 # If you also want to catch step limits for a specific srun step, repeat with %L from
 # squeue -h -j $SLURM_JOB_ID -o %L while in the step (or use SLURM_TIMELIMIT if your site exports it).
 
@@ -100,38 +209,88 @@ fi
 #####################
 # GPUs total (robust)
 #####################
-GPUS_TOTAL=0
-TRES="$(field TRES || true)"
-# 1) Prefer TRES: gres/gpu=<N> (allow leading spaces)
-if [[ "$TRES" =~ (^|,)[[:space:]]*gres/gpu=([0-9]+)(,|$) ]]; then
+# ---- Detect GPUs and compute totals: works for --gpus* and --gres on LUMI ---
+set +u  # avoid nounset while parsing
+GPUS_TOTAL=""; GPUS_PER_NODE=""
+JOBREC="$(scontrol show -d job  "${SLURM_JOB_ID:?}" 2>/dev/null | tr '\n' ' ')"
+STEPREC="$(scontrol show -d step "${SLURM_JOB_ID}.batch" 2>/dev/null | tr '\n' ' ')"
+REC_ALL="$JOBREC $STEPREC"
+: "${JOBREC:=}"
+: "${STEPREC:=}"
+: "${REC_ALL:=}"
+: "${GPU_GRES_STR:=}"   # <-- critical
+#echo "DBG env: GPUS=${SLURM_GPUS-} GPUS_PER_TASK=${SLURM_GPUS_PER_TASK-} GPUS_PER_NODE=${SLURM_GPUS_PER_NODE-}" >&2
+#echo "DBG job:  $(sed 's/  */ /g' <<<"$JOBREC")" >&2
+#echo "DBG step: $(sed 's/  */ /g' <<<"$STEPREC")" >&2
+
+# 1) Modern --gpus* envs (may be absent on LUMI)
+if [[ -n "${SLURM_GPUS-}" && "$SLURM_GPUS" =~ ^[0-9]+$ ]]; then
+  GPUS_TOTAL="$SLURM_GPUS"
+elif [[ -n "${SLURM_GPUS_PER_TASK-}" && -n "${SLURM_NTASKS-}" ]]; then
+  GPUS_TOTAL=$(( SLURM_GPUS_PER_TASK * SLURM_NTASKS ))
+elif [[ -n "${SLURM_GPUS_PER_NODE-}" && -n "${SLURM_JOB_NUM_NODES-}" ]]; then
+  GPUS_PER_NODE="${SLURM_GPUS_PER_NODE%%:*}"
+  GPUS_TOTAL=$(( GPUS_PER_NODE * SLURM_JOB_NUM_NODES ))
+fi
+
+# 2) TRES has total GPUs (ReqTRES/AllocTRES: "gres/gpu[:type]=N")
+if [[ -z "$GPUS_TOTAL" && "$REC_ALL" =~ gres\/gpu([^=[:space:]]*)?=([0-9]+) ]]; then
   GPUS_TOTAL="${BASH_REMATCH[2]}"
-else
-  # 2) Fallback: sum counts from Gres= (handles gpu:<type>:N and multiple tokens)
-  GRES="$(field Gres || true)"               # e.g., "gpu:mi250:8,nvme:1"
-  if [[ "$GRES" == *gpu* ]]; then
-    while IFS= read -r tok; do
-      n=$(awk -F: '{print $NF}' <<<"$tok" | sed -E 's/[^0-9].*$//')
-      [[ -n "$n" ]] && (( GPUS_TOTAL += n ))
-    done < <(grep -oE 'gpu[^, ]*' <<<"$GRES")
-  else
-    # 3) Last-ditch: NumGres= may contain gpu:<N> on some systems
-    NUMGRES="$(field NumGres || true)"
-    if [[ "$NUMGRES" =~ gpu:([0-9]+) ]]; then
-      GPUS_TOTAL="${BASH_REMATCH[1]}"
-    fi
+fi
+
+# 3) Per-node from TresPerNode=gres:gpu(:type)?:N (preferred on LUMI)
+if [[ -z "$GPUS_PER_NODE" && "$REC_ALL" =~ TresPerNode=([^[:space:]]+) ]]; then
+    GPN="${BASH_REMATCH[1]}"
+    GRES_STR="$GPN"
+    GPN="${GPN%%(*}"   # drop decorations like (IDX:...)
+    totpn=0
+    IFS=, read -ra toks <<<"$GPN"
+    for t in "${toks[@]}"; do
+	[[ "$t" == gres:gpu* || "$t" == gpu* ]] || continue
+	n="${t##*:}"
+	[[ "$n" =~ ^[0-9]+$ ]] && (( totpn += n ))
+    done
+    (( totpn > 0 )) && GPUS_PER_NODE="$totpn"
+fi
+
+# 4) Fallback per-node from JOB_GRES= or Gres=
+if [[ -z "$GPUS_PER_NODE" ]]; then
+  if   [[ "$REC_ALL" =~ JOB_GRES=([^[:space:]]+) ]]; then GRES_STR="${BASH_REMATCH[1]}"
+  elif [[ "$REC_ALL" =~ [[:space:]]Gres=([^[:space:]]+) ]]; then GRES_STR="${BASH_REMATCH[1]}"
+  else GRES_STR=""; fi
+  if [[ -n "$GRES_STR" ]]; then
+    GRES_STR="${GRES_STR%%(*}"
+    totpn=0
+    IFS=, read -ra toks <<<"$GRES_STR"
+    for t in "${toks[@]}"; do
+      [[ "$t" == gpu* ]] || continue
+      n="${t##*:}"
+      [[ "$n" =~ ^[0-9]+$ ]] && (( totpn += n ))
+    done
+    (( totpn > 0 )) && GPUS_PER_NODE="$totpn"
   fi
 fi
-: "${GPUS_TOTAL:?ERROR: could not determine total GPUs}"
-# friendly check: 1 MPI task per GPU is a good defaultl for DL
-: "${SLURM_NTASKS:?❌ SLURM_NTASKS is not set}"            
-if (( GPUS_TOTAL > 0 )) && [[ -n "${SLURM_NTASKS:-}" ]] && (( SLURM_NTASKS != GPUS_TOTAL )); then
-  echo "❌ WARN: SLURM_NTASKS=$SLURM_NTASKS but GPUs allocated=$GPUS_TOTAL. One task per GPU is typical on $SYSTEM." >&2
+
+# 5) If per-node known, compute total via nodes
+if [[ -z "$GPUS_TOTAL" && -n "$GPUS_PER_NODE" ]]; then
+  if   [[ -n "${SLURM_JOB_NUM_NODES-}" ]]; then NODES="$SLURM_JOB_NUM_NODES"
+  elif [[ "$REC_ALL" =~ NumNodes=([0-9]+) ]]; then NODES="${BASH_REMATCH[1]}"
+  else NODES=""; fi
+  [[ "$NODES" =~ ^[0-9]+$ ]] && GPUS_TOTAL=$(( GPUS_PER_NODE * NODES ))
 fi
-(( GPUS_TOTAL > 0 )) || { echo "❌ ERROR: No GPUs requested. Use --gres=gpu:<type>:<N>."; exit 1; }
+set -u  # restore nounset
 
+# Optional: forbid mixing styles (env gpus* + GRES in records)
+if [[ ( -n "${SLURM_GPUS_PER_TASK-}" || -n "${SLURM_GPUS_PER_NODE-}" || -n "${SLURM_GPUS-}" ) \
+      && "$REC_ALL" == *" Gres="*gpu* ]]; then
+  echo "❌ Mixed GPU styles detected (--gpus* and --gres). Pick one." >&2
+  exit 1
+fi
 
-
-
+# Final assert (now safe)
+: "${GPUS_TOTAL:?❌ No GPUs requested. Use either --gpus-* OR --gres=gpu[:type]:N.}"
+echo "OK[gpu-spec]: total=$GPUS_TOTAL per-node=${GPUS_PER_NODE:-unknown}"
+# -----------------------------------------------------------------------------
 
 
 
@@ -160,22 +319,27 @@ case "$SYSTEM" in
   *) echo "❌ ERROR: SYSTEM must be {puhti,mahti,lumi}, got '$SYSTEM'"; exit 1;;
 esac
 (( GPUS_PER_NODE > 0 )) || { echo "❌ ERROR: Could not determine GPUs per node from GRES/TRES."; exit 1; }
+
 # GPU type must match the system
-if [[ -n "$GRES" ]]; then
-  if ! grep -Eq "$GPU_OK_REGEX" <<<"$GRES"; then
-    echo "❌ ERROR: Wrong or missing GPU type in --gres for $SYSTEM."
-    echo "       Got: Gres='$GRES'"
+if [[ -n "${GRES_STR-}" ]]; then
+  if ! grep -Eq "$GPU_OK_REGEX" <<<"$GRES_STR"; then
+    echo "❌ ERROR: Wrong or missing GPU type in GPU request for $SYSTEM."
+    echo "       Got: '$GRES_STR'"
     case "$SYSTEM" in
       puhti) echo "       Use: --gres=gpu:v100:<N> (Puhti has NVIDIA V100).";;
       mahti) echo "       Use: --gres=gpu:a100:<N> (or a100_1g.5gb on gpusmall).";;
-      lumi)  echo "       Use: --gres=gpu:mi250:K or plain --gres=gpu:K (LUMI GPUs are MI250X; Slurm exposes 8 GCDs/node).";;
+      lumi)  echo "       Use: --gres=gpu:mi250:<K> or plain --gres=gpu:<K> (MI250X, 8 GCDs/node).";;
     esac
     exit 1
   fi
 else
-  echo "❌ ERROR: GRES not set. Always request typed GPUs: --gres=gpu:<type>:<N>." ; exit 1
+  # No typed GRES visible. Be strict on Puhti/Mahti; allow untyped on LUMI if you want.
+  if [[ "$SYSTEM" == "lumi" ]]; then
+    echo "ℹ️  No typed GRES found in job record; allowing untyped 'gpu:<K>' on LUMI."
+  else
+    echo "❌ ERROR: GRES not visible here. Request typed GPUs: --gres=gpu:<type>:<N>." ; exit 1
+  fi
 fi
-
 
 ###################################
 # Robust "GPUS_PER_NODE" derivation
@@ -183,15 +347,15 @@ fi
 GPUS_PER_NODE=0 # fallback
 GPUPN_STR="$(field GresPerNode || true)"    # e.g. "gpu:mi250x:8" or "gpu:a100_1g.5gb:2(IDX:0-1),nvme:1"
 if [[ "$GPUPN_STR" == *gpu* ]]; then
-  # Sum all gpu:*:* tokens; strip any trailing decorations after the count
-  while IFS= read -r tok; do
-    n=$(awk -F: '{print $NF}' <<<"$tok" | sed -E 's/[^0-9].*$//')
-    [[ -n "$n" ]] && (( GPUS_PER_NODE += n ))
-  done < <(grep -oE 'gpu[^, ]*' <<<"$GPUPN_STR")
+    # Sum all gpu:*:* tokens; strip any trailing decorations after the count
+    while IFS= read -r tok; do
+	n=$(awk -F: '{print $NF}' <<<"$tok" | sed -E 's/[^0-9].*$//')
+	[[ -n "$n" ]] && (( GPUS_PER_NODE += n ))
+    done < <(grep -oE 'gpu[^, ]*' <<<"$GPUPN_STR")
 fi
 # Fallbacks if GresPerNode didn’t give it. Safe fallback: only if homogeneous
 if (( GPUS_PER_NODE == 0 )); then
-  TRES="$(_field TRES || true)"                     # e.g. "cpu=56,mem=512G,gres/gpu=8"
+  TRES="$(field TRES || true)"                     # e.g. "cpu=56,mem=512G,gres/gpu=8"
   if [[ "$TRES" =~ gres/gpu=([0-9]+) ]] && (( NODES > 0 )); then
     total=${BASH_REMATCH[1]}
     if (( total % NODES == 0 )); then
@@ -200,6 +364,7 @@ if (( GPUS_PER_NODE == 0 )); then
       echo "ERROR: GPU count is heterogeneous across nodes; cannot infer GPUS_PER_NODE from totals." >&2
       exit 1
     fi
+  fi
   if (( NODES > 0 )) && (( GPUS_TOTAL % NODES == 0 )); then
       GPUS_PER_NODE=$(( GPUS_TOTAL / NODES ))
   else
@@ -300,7 +465,6 @@ fi
 
 
 
-
 # ---------- Slurm vs. torchrun patterns ----------
 if [[ "$PATTERN" == "torchrun" ]]; then
   # Pattern B: 1 task per node; torchrun spawns NPROC_PER_NODE == GPUs/node
@@ -342,26 +506,28 @@ if [[ -n "$MEM_PER_NODE_MB" && -n "$MEM_PER_GPU_MB" ]]; then
   echo "❌ ERROR: Don't mix --mem and --mem-per-gpu. Pick one (prefer --mem-per-gpu for GPU jobs)."; exit 1
 fi
 
+
 if [[ -n "$MEM_PER_GPU_MB" ]]; then
-  mem_gb=$(( (MEM_PER_GPU_MB + 1023) / 1024 ))
-  # Special case: Mahti A100 slices have fixed mem & CPU limits
-  if [[ "$SYSTEM" == "mahti" && "$GRES" == *"a100_1g.5gb"* ]]; then
-    if (( CPUS_PER_TASK > 4 )); then
-      echo "❌ ERROR[Mahti slice]: a100_1g.5gb allows at most 4 CPU cores per job."; exit 1
+    mem_gb=$(( (MEM_PER_GPU_MB + 1023) / 1024 ))
+    # Special case: Mahti A100 slices have fixed mem & CPU limits
+    if [[ "$SYSTEM" == "mahti" && "$GRES" == *"a100_1g.5gb"* ]]; then
+	if (( CPUS_PER_TASK > 4 )); then
+	    echo "❌ ERROR[Mahti slice]: a100_1g.5gb allows at most 4 CPU cores per job."; exit 1
+	fi
+	if (( mem_gb != 18 )); then
+	    echo "❌ ERROR[Mahti slice]: a100_1g.5gb jobs get ~17.5 GiB automatically; don't set --mem-per-gpu (got ${mem_gb}G)."
+	    exit 1
+	fi
+    else
+	# General caps per system
+	case "$SYSTEM" in
+	    puhti) if (( mem_gb > 95 )); then echo "❌ ERROR: --mem-per-gpu=${mem_gb}G too high for Puhti; ~95G/GPU is the practical max."; exit 1; fi ;;
+	    mahti) if (( mem_gb > 128 )); then echo "❌ ERROR: --mem-per-gpu=${mem_gb}G too high for Mahti; ≤128G/GPU (512G/node ÷ 4)."; exit 1; fi ;;
+	    lumi)  if (( mem_gb > 64 )); then echo "❌ ERROR: --mem-per-gpu=${mem_gb}G too high for LUMI; keep ≤60–64G/GPU."; exit 1; fi ;;
+	esac
     fi
-    if (( mem_gb != 18 )); then
-      echo "❌ ERROR[Mahti slice]: a100_1g.5gb jobs get ~17.5 GiB automatically; don't set --mem-per-gpu (got ${mem_gb}G)."
-      exit 1
-    fi
-  else
-    # General caps per system
-    case "$SYSTEM" in
-      puhti) if (( mem_gb > 95 )); then echo "❌ ERROR: --mem-per-gpu=${mem_gb}G too high for Puhti; ~95G/GPU is the practical max."; exit 1; fi ;;
-      mahti) if (( mem_gb > 128 )); then echo "❌ ERROR: --mem-per-gpu=${mem_gb}G too high for Mahti; ≤128G/GPU (512G/node ÷ 4)."; exit 1; fi ;;
-      lumi)  if (( mem_gb > 64 )); then echo "❌ ERROR: --mem-per-gpu=${mem_gb}G too high for LUMI; keep ≤60–64G/GPU."; exit 1; fi ;;
-    esac
-  fi
 fi
+
 
 # Helper: MB->GB (rounded up)
 mb_to_gb() { local x=${1:-0}; echo $(( (x + 1023) / 1024 )); }
@@ -386,6 +552,12 @@ if (( mix_count > 1 )); then
 fi
 
 # 1) GPU jobs: require --mem-per-gpu; forbid others
+#
+# Request host memory explicitly, even if GPUs aren’t shareable. GPUs
+# and CPU RAM are scheduled separately. On LUMI/Puhti, if you take
+# fewer than all GPUs on a node, other jobs can share the node’s host
+# memory; without --mem / --mem-per-gpu Slurm may give you too little
+# (OOM kills) or your job may overcommit memory that others need.
 if (( GPUS_TOTAL > 0 )); then
   if [[ -z "$MEM_PER_GPU_MB" ]]; then
     echo "ERROR: GPU job without --mem-per-gpu. Request memory per GPU (e.g. --mem-per-gpu=${REC_PER_GPU_MAX_GB}G)." >&2
@@ -486,17 +658,17 @@ echo " local GPUS_TOTAL          : $GPUS_TOTAL"
 echo " local GPUS_PER_NODE_MAX   : $GPUS_PER_NODE_MAX"
 echo " local GPUS_PER_NODE       : $GPUS_PER_NODE"
 echo " local GPU_OK_REGEX        : $GPU_OK_REGEX"
+echo " local GRES_STR            : $GRES_STR"
 echo " local REC_CPUS_PER_GPU_MIN: $REC_CPUS_PER_GPU_MIN"
 echo " local REC_MEM_PER_GPU_GB  : $REC_MEM_PER_GPU_GB"
 echo " SLURM_CPUS_PER_TASK       : $SLURM_CPUS_PER_TASK"
 echo " GPUS_PER_TASK             : $GPUS_PER_TASK"
 echo " SLURM_JOB_PARTITION       : $SLURM_JOB_PARTITION"
-echo " SLURM_MEM_PER_GPU         : $SLURM_MEM_PER_GPU"
-echo " SLURM_MEM_PER_CPU         : $SLURM_MEM_PER_CPU"
-echo " SLURM_MEM_PER_NODE        : $SLURM_MEM_PER_NODE"
+echo " SLURM_MEM_PER_GPU         : ${SLURM_MEM_PER_GPU-}"
+echo " SLURM_MEM_PER_CPU         : ${SLURM_MEM_PER_CPU-}"
+echo " SLURM_MEM_PER_NODE        : ${SLURM_MEM_PER_NODE-}"
 echo " local NODE_RAM_GB         : $NODE_RAM_GB"
 echo ==============================================
-echo "Novice's allocation checks completed. Ready to finalize the job launch..."
 
 
 # Copyright (c) 2025.  Creative Commons.
@@ -533,4 +705,5 @@ echo "Novice's allocation checks completed. Ready to finalize the job launch..."
 # - max 2 A100 or one A100 slice with ≤4 CPU cores and ~17.5 GiB RAM. (Docs CSC)
 
 export SANITY_CHECKS_OK=1
+
 

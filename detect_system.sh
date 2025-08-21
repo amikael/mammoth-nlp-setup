@@ -12,13 +12,13 @@ echo "✅ It seems that this script is being included (rather than beeing called
 HOSTNAME=$(hostname)  # this does not work well for lumi
 if [[ $SYSTEM == "" ]]; then
    if [[ "$HOSTNAME" == roihu* ]]; then
-      export SYSTEM="roihu"
+      export SYSTEM=roihu
    elif [[ "$HOSTNAME" == mahti* ]]; then
-      export SYSTEM="mahti"
+      export SYSTEM=mahti
    elif [[ "$HOSTNAME" == puhti* ]]; then
-      export SYSTEM="puhti"
+      export SYSTEM=puhti
    elif grep -q 'lumi-super' /etc/motd; then
-      export SYSTEM="lumi"
+      export SYSTEM=lumi
    else
       echo "⚠️ Unknown system: $HOSTNAME. Please edit this script (detect_system.sh) manually."
       exit 1
