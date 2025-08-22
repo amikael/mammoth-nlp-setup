@@ -11,7 +11,7 @@ local singRoot = os.getenv('PROJHOME') or '/project/project_462000964/members/ay
 
 family("python_ml_env")
 
-prepend_path('PATH', '/project/project_462000964/members/aylijyra/bin')
+prepend_path('PATH', '/project/project_462000964/members/aylijyra/bin/wrappers')
 
 setenv('SING_IMAGE', pathJoin(singRoot, 'images', singName))
 setenv('NCCL_SOCKET_IFNAME', 'hsn')  -- use only high speed network
