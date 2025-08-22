@@ -90,7 +90,13 @@ export MIOPEN_USER_DB_PATH="${MIOPEN_USER_DB_PATH:-$BASE/$USER-miopen-${SLURM_JO
 # Keep this inside srun so SLURM_NODEID exists.
 export MIOPEN_CUSTOM_CACHE_DIR="${MIOPEN_CUSTOM_CACHE_DIR:-$MIOPEN_USER_DB_PATH}"
 mkdir -p -- "$MIOPEN_USER_DB_PATH" >/dev/null 2>&1 || true
-
+#
+# Match OpenMP threads to cpus-per-task (data loaders often separate; this is safe)
+if [[ -n "${SLURM_CPUS_PER_TASK:-}" && "${SLURM_CPUS_PER_TASK}" -gt 0 ]]; then
+  export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
+  export OMP_PROC_BIND="${OMP_PROC_BIND:-close}"
+  export OMP_PLACES="${OMP_PLACES:-cores}"
+fi
 
 
 # Optional: quick affinity print + guardrails (teach-by-error)

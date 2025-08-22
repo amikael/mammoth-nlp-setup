@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo Running a python wrapper...
+
 # Ensure container module was loaded ---
 if [ -z "$SING_IMAGE" ]; then
     echo "ERROR: No singularity-based module loaded!"
@@ -9,9 +11,11 @@ if [ -z "$SING_IMAGE" ]; then
 fi
 
 REAL_PYTHON="${BASH_SOURCE[0]}"
-echo "Real python: $REAL_PYTHON"
+echo ===================================================================================
+echo " Real python              : $REAL_PYTHON"
 EXEC_BIN=$(basename "$0")
-echo "Running $EXEC_BIN in $SING_IMAGE..."
+echo " Running binary           : $EXEC_BIN"
+echo " Container                : $SING_IMAGE"
 
 export SING_FLAGS="$SING_FLAGS -B /appl/local/csc/soft/ai/bin -B /appl/lumi"
 
@@ -22,10 +26,10 @@ if [ -d "/var/lib/project_info" ]; then
 fi
 
 # Virtualenv PYTHONPATH helper (only needed inside container) 
-echo $VIRTUAL_ENV
+echo " Virtual environment      : $VIRTUAL_ENV"
 if [ -n "$VIRTUAL_ENV" ]; then
     for _tmp_py_dir in "$VIRTUAL_ENV"/lib{,64}/python*/site-packages; do
-	echo including $_tmp_py_dir ...
+	echo " - included directory     : $_tmp_py_dir"
         export PYTHONPATH="$_tmp_py_dir:$PYTHONPATH"
     done
 fi
@@ -53,7 +57,7 @@ if [ -d /.singularity.d/ ]; then
     exec -a $REAL_PYTHON $EXEC_BIN "$@"
 
 else
-    echo Launch into container and forward virtual environment
+    # echo Launch into container and forward virtual environment
     CONTAINER_CMD=""
 
     # Build container-side command to run after entry
@@ -73,7 +77,12 @@ else
     BINDINGS="--bind /bin/ip:/bin/ip --bind /usr/lib64/libmnl.so.0:/usr/lib64/libmnl.so.0 \
     --bind /opt/cray/libfabric/1.15.2.0/bin/fi_info:/bin/fi_info --bind /sys:/sys:ro "
 
-    echo /appl/local/csc/soft/ai/bin/singularity_wrapper exec $BINDINGS $SING_IMAGE bash -c "$CONTAINER_CMD"
+    echo " Running binary           : $EXEC_BIN"
+    echo " Binding                  : $BINDINGS"
+    printf '%s\n' "  $BINDINGS" \
+	| sed -E ' s/[[:space:]]+--bind/\n Binding                  :/g' | sed '/^$/d' 
+    echo " Command                  : $CONTAINER_CMD"
+    echo ===================================================================================
     #    /appl/local/csc/soft/ai/bin/singularity_wrapper
     
     singularity exec $BINDINGS $SING_IMAGE bash -c "$CONTAINER_CMD"

@@ -1,34 +1,38 @@
 (return 0 2>/dev/null) || { echo "❌ Please source this script instead of executing it."; exit 1; }
 echo sbatch-tail...
+set -euo pipefail  # make failures fatal and undefined vars errors (optional)
 
 # These come from the .profile or otherwise from the environment.
 : "${SYSTEM:?❌ SYSTEM is not set}"
 : "${PROJHOME:?❌ PROJHOME is not set}"            
 : "${PROJDATA:?❌ PROJDATA is not set}"            
 : "${ACCOUNT:?❌ ACCOUNT is not set}"              
+: "${SLURM_JOB_NAME:?❌ SLURM_JOB_NAME is not set}"              
 echo ==============================================
 echo " SYSTEM (from .profile)    : $SYSTEM"
 echo " ACCOUNT                   : $ACCOUNT"
 echo " USER                      : $USER"
 echo " PROJHOME (from .profile)  : $PROJHOME"
 echo " PROJDATA (from .profile)  : $PROJDATA"
+echo " SLURM_JOB_NAME            : $SLURM_JOB_NAME"
 echo ==============================================
 
-f="$PROJHOME/bin/distributed-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
-f="$PROJHOME/bin/sanity-checks.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
-f="$PROJDATA/trains/$SLURM_JOB_NAME/job-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
-f="$PROJHOME/bin/module-loads.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
-f="$PROJHOME/bin/comms-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
-f="$PROJHOME/bin/local-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
-f="$PROJHOME/bin/task-wrapper.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+export SLURM="$PROJHOME/bin/slurm"
+f="$SLURM/distributed-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+f="$SLURM/sanity-checks.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+f="$PROJDATA/exp/$SLURM_JOB_NAME/job-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+f="$SLURM/module-loads.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+f="$SLURM/comms-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+f="$SLURM/local-setup.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
+f="$SLURM/task-wrapper.sh"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
 
-source $PROJHOME/bin/distributed-setup.sh
-# These come from $PROJHOME/conf/distributed-setup.sh
+source $SLURM/distributed-setup.sh
+# These come from $SLURM/distributed-setup.sh
 : "${CPUS_PER_TASK:?❌ CPUS_PER_TASK is not set}"
 : "${GPUS_PER_NODE:?❌ GPUS_PER_NODE is not set}"
 : "${DISTR_OPS:?❌ DISTR_OPS is not set}"          # this will be used in srun command
 
-source $PROJDATA/trains/$SLURM_JOB_NAME/job-setup.sh # job configurations define software/data
+source $PROJDATA/exp/$SLURM_JOB_NAME/job-setup.sh # job configurations define software/data
 # These come from job-setup.sh
 : "${MAMMOTH:?❌ MAMMOTH is not set}"              # $PROJHOME/venv/mammoth
 : "${CODE_DIR:?❌ CODE_DIR is not set}"            # $MAMMOTH_BASE/lib64/python3.10/site-packages/mammoth/bin
@@ -40,17 +44,17 @@ source $PROJDATA/trains/$SLURM_JOB_NAME/job-setup.sh # job configurations define
 : "${GUARD_TIME:?❌ GUARD_TIME is not set}"        #
 : "${GUARD_MAX_NODES:?❌ GUARD_MAX_NODES not set}" #
 
-source $PROJHOME/bin/sanity-checks.sh             # check sbatch sanity
-# This comes from $PROJHOME/conf/sanity-checks.sh
+source $SLURM/sanity-checks.sh             # check sbatch sanity
+# This comes from $SLURM/sanity-checks.sh
 : "${SANITY_CHECKS_OK:?❌ SANITY_CHECKS_OK is not set}"
 
-source $PROJHOME/bin/module-loads.sh              # load modules
+source $SLURM/module-loads.sh              # load modules
 
 f="$MAMMOTH/bin/activate"; [[ -s "$f" ]] || { echo "❌ Missing/empty: $f" >&2; exit 1; }
 source $MAMMOTH/bin/activate                       # enter the environment
 
-source $PROJHOME/bin/comms-setup.sh
-# These variables come from comms-setup.sh
+source $SLURM/comms-setup.sh
+# These variables come from $SLURM/comms-setup.sh
 : "${MASTER_PORT:?❌ MASTER_PORT is not set}"
 : "${MASTER_ADDR:?❌ MASTER_ADDR is not set}"
 : "${FI_PROVIDER:?❌ FI_PROVIDER is not set (e.g. cxi)}"
@@ -66,5 +70,9 @@ source $PROJHOME/bin/comms-setup.sh
 # reduces output buffering between tasks and the collector. Handy for
 # debugging, but it adds overhead—use sparingly on big jobs.
 
-srun $DISTR_OPS $PROJHOME/bin/task-wrapper.sh
+# export DIAG=
+# export DIAG=--overlap rocm-smi
+
+# I have to pass the array as arguments as bash cannot export arrays
+srun $DISTR_OPS $SLURM/task-wrapper.sh ${TRAIN_SCRIPT} ${TRAIN_ARGS[@]}
 
