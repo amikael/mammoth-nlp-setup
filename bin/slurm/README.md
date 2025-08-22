@@ -49,7 +49,7 @@ The `sbatch-tail.sh` does the following things:
 6. These scripts have been developed so that they should run correctly on LUMI, Puhti and Mahti.
    However, the scripts have not yet been tested on Puhti and Mahti.
 
-There is README.md in the parent directory telling how do you set up your experiment.
+There is EXPERIMENTS.md in the parent directory telling how do you set up your experiment.
 In relation to this directory, you will need
 
 - a copy of `job-setup_template.sh` as `job-setup.sh`.
