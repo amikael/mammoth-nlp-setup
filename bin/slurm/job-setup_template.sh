@@ -31,10 +31,11 @@ CONF_DIR=$JOB_DIR
 SAVE_DIR=$JOB_DIR/models
 TENSOR_DIR=$JOB_DIR/tensorboard
 CONF_FILE=$CONF_DIR/conf.yml
-MAMMOTH=$PROJHOME/venv/mammoth           # place to find mammoth
-CODE_DIR=$MAMMOTH/lib64/python3.10/site-packages/mammoth/bin
-TRAIN_SCRIPT="$CODE_DIR/train.py"
-export MAMMOTH LOG_DIR TRAIN_SCRIPT
+
+export MAMMOTH=$PROJHOME/venv/mammoth
+export MAMMOTH_BASE=$MAMMOTH
+export CODE_DIR=$MAMMOTH/lib64/python3.10/site-packages/mammoth/bin
+export TRAIN_SCRIPT="$CODE_DIR/train.py"
 
 mkdir -p "$TENSOR_DIR"
 mkdir -p "$LOG_DIR"

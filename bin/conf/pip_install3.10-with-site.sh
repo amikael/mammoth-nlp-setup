@@ -1,6 +1,8 @@
 #! /usr/bin/bash
 # pip_install.sh -- builds a mammoth pip environment
 
+exit 1
+
 # Download
 if [ ! -d  $PROJHOME/rebuilt3.10-with-conda ]; then
     mkdir -p $PROJHOME/rebuilt3.10-with-conda
