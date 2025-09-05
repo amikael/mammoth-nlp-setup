@@ -1,5 +1,6 @@
 # mammoth-nlp-setup
 
+```
 ├── bin
 │   ├── conf
 │   │   ├── build-venv-mammoth-hf.sh                       <= installing feat/hf_integration 
@@ -56,3 +57,4 @@
 │   ├── librccl-net-ofi.so -> /opt/aws-ofi-rccl/librccl-net.so
 │   └── librccl-net.so -> /opt/aws-ofi-rccl/librccl-net.so
 └── README.md                                   this file
+```
