@@ -62,7 +62,7 @@ $GITHOME/mammoth-nlp-setup
 └── README.md                                  this file
 ```
 
-## Your $PROJHOME will have to contain some other files like that **you need to set up yourself**
+## Your $PROJHOME will have to contain some other files that **you need to set up yourself**
 
 ```
 $PROJHOME (put the following somewhere in your project directories and call the root $PROJHOME; set $PROJHOME in your .profile) 
