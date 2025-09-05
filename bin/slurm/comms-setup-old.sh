@@ -1,1 +1,0 @@
-/users/aylijyra/git/mammoth-nlp-setup/rocm-setup.sh
