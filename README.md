@@ -111,12 +111,12 @@ $PROJDATA/exp/2025-08-21_enfi_1n1g-30m
 │   ├── valid.fi-en.en.sp -> ../../../data/europarl/fi-en/valid.fi-en.en.sp
 │   └── valid.fi-en.fi.sp -> ../../../data/europarl/fi-en/valid.fi-en.fi.sp
 ├── eval                                                 # reserved for evaluation 
-├── job-setup.sh                                         # sbatch will read this
+├── job-setup.sh                                         # sbatch-tail will read this; contains the command and args for calling MAMMOTH
 ├── logs                                                 # slurm etc logs
 ├── metrics                                              # links to your metrics
 ├── models                                               # saved MAMMOTH models
 ├── tensorboard                                          # reserved for monitoring
-├── train-1n1g-2h.slurm                                  # your train etc script (to be renamed as enter.slurm)
+├── enter.slurm                                          # your sbatch (training/conversion) script with #SBATCH lines; then sources $PROJHOME/bin/slurm/sbatch-tail.sh
 └── vocab                                                # vocabularies used by the experiment; symlinks to ../../../data/
     ├── opusTC.mul.64k.spm -> ../../../vocab/opusTC.mul.64k.spm
     └── opusTC.mul.vocab.onmt -> ../../../vocab/opusTC.mul.vocab.onmt
